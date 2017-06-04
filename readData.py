@@ -267,7 +267,6 @@ def yieldData4(datas,nums=1):
 
 
 
-a = yieldData3(devData)
 
 
 def getRandomData(datas,randomnums=200):

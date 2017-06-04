@@ -94,6 +94,7 @@ def train(per_traindata_num=10,all_iter=10,testdatas=10,loads_weight=True):
         try:
             cnn_model.fit_generator(yielddatas,per_traindata_num)
         except ValueError:
+            yielddatas = yieldData3(trainData,50)
             print('[Error] fuck the yield.           GG')
         cnn_model.save_weights(os.path.join(save_model_dir,'%s_%d'%(model_name,i)))    
         cnn_model.save(os.path.join(save_model_dir,'%s_%d'%(model_name,i)))
