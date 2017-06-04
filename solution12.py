@@ -35,10 +35,10 @@ qst_input = Input(shape=(200, 400, 1),dtype = 'float32',name = 'qst_input')
 ans_input = Input(shape=(200, 400, 1),dtype = 'float32',name = 'ans_input')
 
 qst_x = Flatten()(qst_input)
-qst_out = Dense(500, activation='relu')(qst_x)
+qst_out = Dense(500, activation='sigmoid')(qst_x)
 
 ans_x = Flatten()(ans_input)
-ans_out = Dense(500, activation='relu')(ans_x)
+ans_out = Dense(500, activation='sigmoid')(ans_x)
 
 x = keras.layers.concatenate([qst_out, ans_out])
 x = Dense(1000, activation='sigmoid')(x)
@@ -81,13 +81,14 @@ def testAllsu(data = devData,n=1):
 
 
 save_model_dir = './models'    
-model_name = 'cnn_model.weight_relu'
+model_name = 'cnn_model.weight_sigmod'
 
 def train(per_traindata_num=10,all_iter=10,testdatas=10,loads_weight=True):
     yielddatas = yieldData3(trainData,50)
     if loads_weight:
         try:
             getWeight('cnn_model.weight_relu')
+            print('[history] read model weight.')
         except Exception:
             print('[warning] Can\'t load Weight.')
     for i in range(all_iter):
