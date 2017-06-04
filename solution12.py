@@ -67,7 +67,7 @@ def test(data = devData,n = 1):
 def testAllsu(data = devData,n=1):
     succeednum = 0
     testn = 0
-    yielddatas = yieldData4(devData,1)
+    yielddatas = yieldData4(devData,10)
     for x,y in yielddatas:
         testn += 1
         y_ = cnn_model.predict(x)

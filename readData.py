@@ -4,6 +4,7 @@ import numpy as np
 import jieba
 import random
 READMODEL = False
+
 try:
     model
 except: 
@@ -15,7 +16,7 @@ devFilename = 'BoP2017-DBQA.dev.txt'
 decode = 'utf8'
 
 
-
+IGNOREWARNING = True
 
 def getLabel(data):
     size = len(data)
@@ -90,7 +91,8 @@ def sts2vec2(sts,max_sequence_len=400):#return m*max_sequence_len 矩阵，词�
             vec[i,:] = np.zeros(400,'float32')
         i += 1
         if i >= max_sequence_len:
-            print('sequence too long:%d'%len(sts))
+            if not IGNOREWARNING:
+                print('sequence too long:%d'%len(sts))
             break
             #raise KeyError('sequence too long:%d'%len(sts))
     return vec
@@ -106,7 +108,8 @@ def sts2vec3(sts,max_sequence_len=400):# #return m*max_sequence_len 矩阵，词
         except KeyError:
             pass      
         if i >= max_sequence_len:
-            print('sequence too long:%d'%len(sts))
+            if not IGNOREWARNING:
+                print('sequence too long:%d'%len(sts))
             break
             #raise KeyError('sequence too long:%d'%len(sts))
     return vec
