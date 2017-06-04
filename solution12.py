@@ -51,7 +51,7 @@ def getWeight(name = 'cnn_model.weight_50_300'):
     cnn_model.load_weights(name)
     return cnn_model
 
-yielddatas = yieldData3(trainData,50)
+
 
 try:
     getWeight('cnn_model.weight_relu')
@@ -84,6 +84,7 @@ save_model_dir = './models'
 model_name = 'cnn_model.weight_relu'
 
 def train(per_traindata_num=10,all_iter=10,testdatas=10,loads_weight=True):
+    yielddatas = yieldData3(trainData,50)
     if loads_weight:
         try:
             getWeight('cnn_model.weight_relu')
