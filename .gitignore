@@ -1,0 +1,14 @@
+*.bz2
+*.npy
+*.model
+*.text
+*.vector
+*.jian
+*.div
+models/
+*.rar
+BoP2017_DBAQ_dev_train_data/
+__pychche__/
+*.pyc
+cnn.model
+cnn_model.weight
