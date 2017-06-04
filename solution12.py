@@ -67,7 +67,7 @@ def test(data = devData,n = 1):
 def testAllsu(data = devData,n=1):
     succeednum = 0
     testn = 0
-    yielddatas = yieldData4(devData,10)
+    yielddatas = yieldData3(devData,10)
     for x,y in yielddatas:
         testn += 1
         y_ = cnn_model.predict(x)
@@ -83,7 +83,7 @@ def testAllsu(data = devData,n=1):
 save_model_dir = './models'    
 model_name = 'cnn_model.weight_relu'
 
-def train(per_traindata_num=10,all_iter=10,loads_weight=True):
+def train(per_traindata_num=10,all_iter=10,testdatas=10,loads_weight=True):
     if loads_weight:
         try:
             getWeight('cnn_model.weight_relu')
@@ -97,7 +97,7 @@ def train(per_traindata_num=10,all_iter=10,loads_weight=True):
             print('[Error] fuck the yield.           GG')
         cnn_model.save_weights(os.path.join(save_model_dir,'%s_%d'%(model_name,i)))    
         cnn_model.save(os.path.join(save_model_dir,'%s_%d'%(model_name,i)))
-        print('[test] iter %d  ---->    succeed: %f' % (i,testAllsu(n=2000)))
+        print('[test] iter %d  ---->    succeed: %f' % (i,testAllsu(n=testdatas)))
 
 
 if __name__=='__main__':
