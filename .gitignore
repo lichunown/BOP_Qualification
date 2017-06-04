@@ -12,3 +12,10 @@ __pychche__/
 *.pyc
 cnn.model
 cnn_model.weight
+
+div.py.bak
+tempcorpus.mm
+tempcorpus.mm.index
+test.dict
+test.py
+zhwiki-latest-pages-articles.xml
