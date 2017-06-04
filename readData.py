@@ -3,6 +3,8 @@ import os,codecs
 import numpy as np
 import jieba
 import random
+
+
 READMODEL = False
 
 try:
@@ -11,8 +13,8 @@ except:
     READMODEL = True
 
 dataDir = './BoP2017_DBAQ_dev_train_data'
-trainFilename = 'BoP2017-DBQA.train.txt'
-devFilename = 'BoP2017-DBQA.dev.txt'
+trainFilename = 'BoP2017-DBQA.train.txt.new'
+devFilename = 'BoP2017-DBQA.dev.txt.new'
 decode = 'utf8'
 
 

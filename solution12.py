@@ -53,12 +53,8 @@ def getWeight(name = 'cnn_model.weight_50_300'):
 
 
 
-try:
-    getWeight('cnn_model.weight_relu')
-except Exception:
-    print('[warning] Can\'t load Weight.')
     
-def test(data = devData,n = 1):
+def testModel(model=cnn_model,data = devData,n = 1):
     x,y = next(yieldData3(devData,n))
     y_ = cnn_model.predict(x)
     return  np.concatenate((y,y_,y-y_),1),np.max(y_)
@@ -67,7 +63,7 @@ def test(data = devData,n = 1):
 def testAllsu(data = devData,n=1):
     succeednum = 0
     testn = 0
-    yielddatas = yieldData3(devData,10)
+    yielddatas = yieldData3(devData,1)
     for x,y in yielddatas:
         testn += 1
         y_ = cnn_model.predict(x)
@@ -81,10 +77,10 @@ def testAllsu(data = devData,n=1):
 
 
 save_model_dir = './models'    
-model_name = 'cnn_model.weight_sigmod'
+model_name = 'cnn_model.weight_sigmod2'
 
-def train(per_traindata_num=10,all_iter=10,testdatas=10,loads_weight=True):
-    yielddatas = yieldData3(trainData,50)
+def train(per_traindata_num=50,all_iter=20,testdatas=50,loads_weight=True):
+    yielddatas = yieldData3(trainData,20)
     if loads_weight:
         try:
             getWeight('cnn_model.weight_relu')
