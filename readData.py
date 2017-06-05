@@ -56,6 +56,8 @@ def readDataFromTxt(filename,decode='utf8'):
 trainData = readDataFromTxt(os.path.join(dataDir,trainFilename))
 devData = readDataFromTxt(os.path.join(dataDir,devFilename))
 
+
+
 def sts2list(sts):
     IGNORE = {'(',')','.','\,','/','\\','?','<','>','\'','[',']','"','-',
               '_','%','#','@','!','$','^','&','*','+','=',
@@ -63,6 +65,7 @@ def sts2list(sts):
               '】','、','——','…',''
               }
     return [item for item in jieba.cut(sts) if item not in IGNORE]
+
 
 
 
@@ -264,10 +267,33 @@ def yieldData4(datas,nums=1):
         yield([qst,ans],res)
 
 
+def readFinalDataFromTxt(filename,decode='utf8'):
+    f = codecs.open(filename,'r',decode)
+    data = []
+    for line in f:
+        data.append([string.replace('\r\n','') for string in line.split('\t')])
+    return data
+        
+finalData=readFinalDataFromTxt(os.path.join(dataDir,'BoP2017-DBQA.test.txt'))
 
 
+def yieldFinalData(datas = finalData):
+    length = len(datas)
+    for data in datas:
+        yield [sts2vec3(data[0],200).reshape(1,200,400,1),sts2vec3(data[1],200).reshape(1,200,400,1)]
 
 
+def writeData(model,filename='predict.txt'):
+    a = yieldFinalData(finalData)
+    f = open(filename,'w')
+    while True:
+        try:  
+            result = model.predict_generator(a,1)
+        except Exception:
+            break
+        f.write(str(q[0][0]))
+        f.write('\r\n')
+    f.close()
 
 def getRandomData(datas,randomnums=200):
     return [ datas[i] for i in sorted(random.sample(range(len(datas)), randomnums))]
