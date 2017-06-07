@@ -14,7 +14,8 @@ Created on Mon May 29 14:19:36 2017
 @author: lab309
 """
 
-# CNN
+# no CNN
+# just Dense
 
 import numpy as np
 from readData import *
@@ -34,13 +35,18 @@ RUN_TRAIN = False
 qst_input = Input(shape=(200, 400, 1),dtype = 'float32',name = 'qst_input')
 ans_input = Input(shape=(200, 400, 1),dtype = 'float32',name = 'ans_input')
 
-qst_x = Flatten()(qst_input)
-qst_out = Dense(500, activation='relu')(qst_x)
 
-ans_x = Flatten()(ans_input)
-ans_out = Dense(500, activation='relu')(ans_x)
+qst_x = Conv2D(32, (3, 3), activation='sigmoid')(qst_input)
+qst_x = MaxPooling2D(pool_size=(2, 2))(qst_x)
+qst_x = Flatten()(qst_x)
 
-x = keras.layers.concatenate([qst_out, ans_out])
+
+ans_x = Conv2D(32, (3, 3), activation='sigmoid')(ans_input)
+ans_x = MaxPooling2D(pool_size=(2, 2))(ans_x)
+ans_x = Flatten()(ans_x)
+
+
+x = keras.layers.concatenate([qst_x, ans_x])
 x = Dense(1000, activation='sigmoid')(x)
 x = Dense(1, activation='sigmoid')(x)
 
@@ -53,23 +59,19 @@ def getWeight(name = 'cnn_model.weight_50_300'):
 
 
 
-try:
-    getWeight('cnn_model.weight_relu')
-except Exception:
-    print('[warning] Can\'t load Weight.')
     
-def test(data = devData,n = 1):
+def testModel(model=cnn_model,data = devData,n = 1):
     x,y = next(yieldData3(devData,n))
     y_ = cnn_model.predict(x)
     return  np.concatenate((y,y_,y-y_),1),np.max(y_)
 
 
-def testAllsu(data = devData,n=1):
+def testAllsu(cnn_model = cnn_model,data = devData,n=1):
     succeednum = 0
     testn = 0
-    yielddatas = yieldData3(devData,10)
+    yielddatas = yieldData3(devData,1)
     for x,y in yielddatas:
-        testn += 1
+        testn += 1 
         y_ = cnn_model.predict(x)
         yti = np.where(y==1.)[0][0]
         if y_[yti,0] == np.max(y_):
@@ -81,13 +83,14 @@ def testAllsu(data = devData,n=1):
 
 
 save_model_dir = './models'    
-model_name = 'cnn_model.weight_relu'
+model_name = 'cnn_model.weight_CNN'
 
-def train(per_traindata_num=10,all_iter=10,testdatas=10,loads_weight=True):
-    yielddatas = yieldData3(trainData,50)
+def train(per_traindata_num=50,all_iter=20,testdatas=50,loads_weight=True):
+    yielddatas = yieldData3(trainData,20)
     if loads_weight:
         try:
             getWeight('cnn_model.weight_relu')
+            print('[history] read model weight.')
         except Exception:
             print('[warning] Can\'t load Weight.')
     for i in range(all_iter):
@@ -105,3 +108,13 @@ def train(per_traindata_num=10,all_iter=10,testdatas=10,loads_weight=True):
 if __name__=='__main__':
     if RUN_TRAIN:
         train()
+
+def testweight():
+    result = []
+    for i in range(19):
+        cnn_model.load_weights('models/cnn_model.weight_sigmod2_%d'%i)
+        r = testAllsu(cnn_model,n=1000)
+        print('%d:%f'%(i,r))
+        result.append(r)
+    print(result)
+    return result

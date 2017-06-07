@@ -6,8 +6,8 @@
 *.jian
 *.div
 models/
+final/
 *.rar
-BoP2017_DBAQ_dev_train_data/
 __pychche__/
 *.pyc
 cnn.model
