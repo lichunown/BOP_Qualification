@@ -3,8 +3,6 @@ import os,codecs
 import numpy as np
 import jieba
 import random
-
-
 READMODEL = False
 
 try:
@@ -58,6 +56,8 @@ def readDataFromTxt(filename,decode='utf8'):
 trainData = readDataFromTxt(os.path.join(dataDir,trainFilename))
 devData = readDataFromTxt(os.path.join(dataDir,devFilename))
 
+
+
 def sts2list(sts):
     IGNORE = {'(',')','.','\,','/','\\','?','<','>','\'','[',']','"','-',
               '_','%','#','@','!','$','^','&','*','+','=',
@@ -65,6 +65,7 @@ def sts2list(sts):
               '】','、','——','…',''
               }
     return [item for item in jieba.cut(sts) if item not in IGNORE]
+
 
 
 
@@ -235,6 +236,40 @@ def yieldData3(datas,nums=1):
         yield ([np.concatenate((qstresult,qstresult)),np.concatenate((tansresult,fansresult))],
                 np.concatenate((r,np.zeros([n,1],'float32'))))   
 
+def yieldData3_1(datas,nums=1):
+    '''
+    对应于上头的datas2vec10
+    '''
+    while True:
+        data = getRandomData(datas,nums)
+        qstresult,tansresult,fansresult = datas2vec10(data,200)
+        n = qstresult.shape[0]
+        qstresult,tansresult,fansresult = qstresult.reshape(n,200,400),tansresult.reshape(n,200,400),fansresult.reshape(n,200,400)
+        r = np.ones([n,1],'float32')
+        if not r.shape[0]:
+            continue        
+        yield ([np.concatenate((qstresult,qstresult)),np.concatenate((tansresult,fansresult))],
+                np.concatenate((r,np.zeros([n,1],'float32'))))   
+
+def yieldData3_2(datas,nums=1):
+    '''
+    对应于上头的datas2vec10
+    '''
+    while True:
+        data = getRandomData(datas,nums)
+        qstresult,tansresult,fansresult = datas2vec10(data,200)
+        n = qstresult.shape[0]
+        qstresult,tansresult,fansresult = qstresult.reshape(n,200,400),tansresult.reshape(n,200,400),fansresult.reshape(n,200,400)
+        r1 = np.zeros([n,2],'float32')
+        r1[:,0] = 1
+        r2 = np.zeros([n,2],'float32')
+        r2[:,1] = 1
+        if not r1.shape[0]:
+            continue        
+        yield ([np.concatenate((qstresult,qstresult)),np.concatenate((tansresult,fansresult))],
+                np.concatenate((r1,r2)))   
+
+
 def randomVecs(qst,ans,res):
     length = len(qst)
     newrange = [ i for i in range(length)]
@@ -266,8 +301,56 @@ def yieldData4(datas,nums=1):
         yield([qst,ans],res)
 
 
+def readFinalDataFromTxt(filename,decode='utf8'):
+    f = codecs.open(filename,'r',decode)
+    data = []
+    for line in f:
+        data.append([string.replace('\r\n','') for string in line.split('\t')])
+    return data
+        
+finalData=readFinalDataFromTxt(os.path.join(dataDir,'BoP2017-DBQA.test.txt'))
 
 
+def yieldFinalData(datas = finalData):
+    length = len(datas)
+    for data in datas:
+        yield [sts2vec3(data[0],200).reshape(1,200,400),sts2vec3(data[1],200).reshape(1,200,400)]
+
+def yieldDevData():
+    datas = devData
+    for data in datas:
+        qst_v = sts2vec3(data[0],200).reshape(1,200,400)
+        for ans in data[1]:
+            ans_v = sts2vec3(ans,200).reshape(1,200,400)
+            yield [qst_v,ans_v]
+    
+def writeDevData(model,filename='predict_dev.txt'):
+    a = yieldDevData()
+    f = open(filename,'w')
+    i = 0
+    while True:
+        try:  
+            result = model.predict_generator(a,1)
+            i+=1
+            if i%500 ==0:print('have write %d'%i)
+        except Exception:
+            print('error')
+            break
+        f.write(str(result[0][0]))
+        f.write('\r\n')
+    f.close()
+    
+def writeData(model,filename='predict.txt'):
+    a = yieldFinalData(finalData)
+    f = open(filename,'w')
+    while True:
+        try:  
+            result = model.predict_generator(a,1)
+        except Exception:
+            break
+        f.write(str(result[0][0]))
+        f.write('\r\n')
+    f.close()    
 
 
 
@@ -298,6 +381,8 @@ def saveVecs(datas, div = 100):
         
 
 #test datalenth
+
+
 
 
         
