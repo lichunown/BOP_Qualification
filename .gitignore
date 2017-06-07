@@ -6,7 +6,6 @@
 *.jian
 *.div
 models/
-history/
 final/
 *.rar
 __pychche__/
