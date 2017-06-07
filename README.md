@@ -56,3 +56,16 @@ python train_word2vec_model.py wiki.zh.text.jian.seg wiki.zh.text.model wiki.zh.
 我相信我的小学生版本的脚本应该很好读懂的。。。（好吧，注释什么的慢慢补充）
 
 **哦，对了，官方给的数据有一个很奇怪的字符'\ufeff'。需要手动去除。否则脚本会出问题**
+
+## 脚本介绍
+### readData.py
+主要是用来数据处理的……
+### train_LSTM_CNN.py
+用的是LSTM-CNN模型，至于为什么是这个模型，我也不知道。。。反正是copy加魔改版的。。。
+### CreatePredictResult.py & CreatePredictResult_dev.py
+用来生成最终提交数据的。。
+### other
+
+不用管其他的了，那只是我瞎几把写的，啥乱用没有。。。
+
+哦不，还是有点用处的，至少比全随机的MRR值高。。。
