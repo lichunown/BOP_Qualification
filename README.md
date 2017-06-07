@@ -54,3 +54,5 @@ python train_word2vec_model.py wiki.zh.text.jian.seg wiki.zh.text.model wiki.zh.
 有了分好的词向量，就可以用玄学（机器学习）的方法对数据进行训练了。
 
 我相信我的小学生版本的脚本应该很好读懂的。。。（好吧，注释什么的慢慢补充）
+
+**哦，对了，官方给的数据有一个很奇怪的字符'\ufeff'。需要手动去除。否则脚本会出问题**

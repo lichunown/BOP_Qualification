@@ -5,104 +5,89 @@ import jieba
 import random
 READMODEL = False
 
+#我使用的spyder，会保存上一次脚本运行后的数据。
+#下面只是检测model是否曾经读入过。没有读入遍置READMODEL为真，重新读model
+#这个model是分词模型。Wiki语料真的很大。。真的很大。。
+
+
+#哦，对了，官方给的数据有一个很奇怪的字符'\ufeff'。需要手动去除。否则脚本会出问题
 try:
     model
 except: 
     READMODEL = True
 
-dataDir = './BoP2017_DBAQ_dev_train_data'
-trainFilename = 'BoP2017-DBQA.train.txt.new'
-devFilename = 'BoP2017-DBQA.dev.txt.new'
-decode = 'utf8'
+dataDir = './BoP2017_DBAQ_dev_train_data' # 数据目录
+trainFilename = 'BoP2017-DBQA.train.txt' #训练数据集名字
+devFilename = 'BoP2017-DBQA.dev.txt' # 开发数据集名字
+testFilename = 'BoP2017-DBQA.test.txt'# 测试数据集名字
+decode = 'utf8' # 数据集编码
+
+WORDVECNUM = 400 #和之前词典模型有关，看你word2vec怎么训练的
+
+IGNORE = {'(',')','.','\,','/','\\','?','<','>','\'','[',']','"','-',
+          '_','%','#','@','!','$','^','&','*','+','=',
+          '。','，','！','《','》','“','”','‘','’','：','；','【',
+          '】','、','——','…',''
+    }# jieba分词后忽略的词
 
 
-IGNOREWARNING = True
+IGNOREWARNING = True # 是否屏蔽输出分词溢出警告
 
-def getLabel(data):
-    size = len(data)
-    result = np.zeros([size,1])
-    i=0
-    for line in data:
-        result[i,0] = int(line[0].strip('\ufeff'))
-        i += 1
-    return result
-
-"""
-    [question,[answers],[results]]
-
-"""
-def readDataFromTxt(filename,decode='utf8'):
-    f = codecs.open(filename,'r',decode)
-    line = f.readline()
-    returnresult = []
-    data = line.split('\t')
-    question = data[1]
-    answers = [data[2]]
-    results = [data[0]]
-    while line:
-        data = line.split('\t')
-        line = f.readline()
-        if data[1] == question:
-            answers.append(data[2][0:-2])
-            results.append(int(data[0].strip('\ufeff')))
-        else:
-            returnresult.append([question,answers,results])
-            question = data[1]
-            answers = [data[2][0:-2]]
-            results = [int(data[0].strip('\ufeff'))]     
-    return returnresult
-
-
-trainData = readDataFromTxt(os.path.join(dataDir,trainFilename))
-devData = readDataFromTxt(os.path.join(dataDir,devFilename))
-
-
-
-def sts2list(sts):
-    IGNORE = {'(',')','.','\,','/','\\','?','<','>','\'','[',']','"','-',
-              '_','%','#','@','!','$','^','&','*','+','=',
-              '。','，','！','《','》','“','”','‘','’','：','；','【',
-              '】','、','——','…',''
-              }
-    return [item for item in jieba.cut(sts) if item not in IGNORE]
-
-
-
-
-if READMODEL:
+if READMODEL:# 没有预先读入model，就读model
     import gensim
     model = gensim.models.Word2Vec.load("wiki.zh.text.model")
     
-def sts2vec(sts):#生成1行400列的矩阵，是将所以词向量相加
-    sts = sts2list(sts)
-    vec = np.zeros(400,'float32')
-    for word in sts:
-        try:
-            vec += model[word]
-        except KeyError:
-            pass
-    return vec
+    
 
-def sts2vec2(sts,max_sequence_len=400):#return m*max_sequence_len 矩阵，词不在字典则添加0向量
+
+"""
+数据存储:
+    [
+     [quetion,ans,result],
+     [quetion,ans,result],
+     ...
+    ]
+
+"""
+
+def readDataFromTxt(filename,decode='utf8'):# 从开发集和训练集中读取数据
+    f = codecs.open(filename,'r',decode)
+    datas = []
+    for line in f:
+        datas.append([string.replace('\r\n','').replace('\ufeff','') for string in line.split('\t')])
+    return datas
+
+        
+testData = readDataFromTxt(os.path.join(dataDir,testFilename)) #测试集数据
+trainData = readDataFromTxt(os.path.join(dataDir,trainFilename))# 训练集数据
+devData = readDataFromTxt(os.path.join(dataDir,devFilename))# 开发集数据
+
+
+def sts2list(sts):#jieba 分词，返回分词列表
+    return [item for item in jieba.cut(sts) if item not in IGNORE]
+
+
+# 这个函数我没有用到过，但你可以用啊
+def sts2vec_add0(sts,max_sequence_len=200):# max_sequence_len：词的长度。return m*max_sequence_len 矩阵，词不在字典则添加0向量
     sts = sts2list(sts)
-    vec = np.zeros([max_sequence_len,400],'float32')    
+    vec = np.zeros([max_sequence_len,WORDVECNUM],'float32')    
     i = 0
     for word in sts:
         try:
             vec[i,:] = model[word]
         except KeyError:
-            vec[i,:] = np.zeros(400,'float32')
+            vec[i,:] = np.zeros(WORDVECNUM,'float32')
         i += 1
         if i >= max_sequence_len:
             if not IGNOREWARNING:
-                print('sequence too long:%d'%len(sts))
+                print('[warning] sequence too long:%d'%len(sts))
             break
             #raise KeyError('sequence too long:%d'%len(sts))
     return vec
 
-def sts2vec3(sts,max_sequence_len=400):# #return m*max_sequence_len 矩阵，词不在字典则忽略
+def sts2vec(sts,max_sequence_len=200):# max_sequence_len：词的长度。return m*max_sequence_len 矩阵，词不在字典则忽略
     sts = sts2list(sts)
-    vec = np.zeros([max_sequence_len,400],'float32')    
+    vec = np.zeros([max_sequence_len,WORDVECNUM],'float32')    
     i = 0
     for word in sts:
         try:
@@ -112,273 +97,78 @@ def sts2vec3(sts,max_sequence_len=400):# #return m*max_sequence_len 矩阵，词
             pass      
         if i >= max_sequence_len:
             if not IGNOREWARNING:
-                print('sequence too long:%d'%len(sts))
+                print('[warning] sequence too long:%d'%len(sts))
             break
             #raise KeyError('sequence too long:%d'%len(sts))
     return vec
 
-def datas2vec2(datas,max_sequence_len=400):
-    length = 0
-    for data in datas:
-        length += len(data[1])
-    qstresult = np.zeros([length,max_sequence_len,400,1],'float32')
-    ansresult = np.zeros([length,max_sequence_len,400,1],'float32')
-    tofresult = np.zeros([length,1],'float32')
-    i = 0
-    for data in datas:
-        j = 0
-        for ans in data[1]:
-            qstresult[i,:,:,0] = sts2vec2(data[0],max_sequence_len)
-            ansresult[i,:,:,0] = sts2vec2(ans,max_sequence_len)
-            if isinstance(data[2][j],int):
-                tofresult[i,0] = float(data[2][j])
-            else:
-                tofresult[i,0] = float(int(data[2][j].strip('\ufeff')))
-            j += 1
-            i += 1
-    return (qstresult,ansresult,tofresult)
-
-
-def datas2vec3(datas,max_sequence_len=200):
-    length = 0
-    for data in datas:
-        length += 2*len(data[1])-2
-    qstresult = np.zeros([length,max_sequence_len,400,1],'float32')
-    ansresult = np.zeros([length,max_sequence_len,400,1],'float32')
-    tofresult = np.zeros([length,1],'float32')
-    i = 0
-    for data in datas:
-        j = 0
-        for ans in data[1]:
-            qstresult[i,:,:,0] = sts2vec3(data[0],max_sequence_len)
-            ansresult[i,:,:,0] = sts2vec3(ans,max_sequence_len)
-            if isinstance(data[2][j],int):
-                tofresult[i,0] = float(data[2][j])
-            else:
-                tofresult[i,0] = float(int(data[2][j].strip('\ufeff')))
-            j += 1
-            i += 1
-    return (qstresult,ansresult,tofresult)
-
-
-
-
-
-def data2vec4(data,max_sequence_len=200):
-    length = 2 * len(data[1]) - 2
-    qstresult = np.zeros([length,max_sequence_len,400,1],'float32')
-    ansresult = np.zeros([length,max_sequence_len,400,1],'float32')
-    tofresult = np.zeros([length,1],'float32')
-    arraynum = 0
-    for ansnum,ans in enumerate(data[1]):
-        qstresult[arraynum,:,:,0] = sts2vec3(data[0],max_sequence_len)
-        ansresult[arraynum,:,:,0] = sts2vec3(ans,max_sequence_len)
-        if isinstance(data[2][ansnum],int):
-            tofresult[arraynum,0] = float(data[2][ansnum])
-        else:
-            tofresult[arraynum,0] = float(int(data[2][ansnum].strip('\ufeff')))  
-        arraynum += 1
-        if tofresult[arraynum,0] == 1:
-            for addi in range(len(data[1])-2):
-                qstresult[arraynum,:,:,0] = qstresult[arraynum-addi-1,:,:,0]
-                ansresult[arraynum,:,:,0] = ansresult[arraynum-addi-1,:,:,0]
-                tofresult[arraynum,0] = 1
-                arraynum += 1
-    return (qstresult,ansresult,tofresult)
-
-def datas2vec10(datas,max_sequence_len=200):
-    '''
-    输出为（问题，正确回答，错误回答）
-    '''
-    length = 0
-    for data in datas:
-        length += len(data[1]) - 1
-    qstresult = np.zeros([length,max_sequence_len,400,1],'float32')
-    tansresult = np.zeros([length,max_sequence_len,400,1],'float32')
-    fansresult = np.zeros([length,max_sequence_len,400,1],'float32')
-    arraynum = 0
-    for datanum,data in enumerate(datas):
-        tofarray = np.array([data[2]],'float32').T
-        try:
-            tnum = np.where(tofarray==1)[0][0]
-        except:
-            return(np.array([]),np.array([]),np.array([]))
-        for ansnum,ans in enumerate(data[1]):
-            if tnum==ansnum:continue
-            qstresult[arraynum,:,:,0] = sts2vec3(data[0],max_sequence_len)
-            tansresult[arraynum,:,:,0] = sts2vec3(data[1][tnum],max_sequence_len)
-            fansresult[arraynum,:,:,0] = sts2vec3(ans,max_sequence_len)
-            arraynum += 1 
-    return (qstresult,tansresult,fansresult)
-
-
-
-def yieldData2(datas,nums=1):
-    '''
-    对应于上头的datas2vec10
-    '''
-    while True:
-        data = getRandomData(datas,nums)
-        qstresult,tansresult,fansresult = datas2vec10(data,200)
-        yield (qstresult,tansresult,fansresult)
-        
-def yieldData3(datas,nums=1):
-    '''
-    对应于上头的datas2vec10
-    '''
-    while True:
-        data = getRandomData(datas,nums)
-        qstresult,tansresult,fansresult = datas2vec10(data,200)
-        n = qstresult.shape[0]
-        r = np.ones([n,1],'float32')
-        if not r.shape[0]:
-            continue        
-        yield ([np.concatenate((qstresult,qstresult)),np.concatenate((tansresult,fansresult))],
-                np.concatenate((r,np.zeros([n,1],'float32'))))   
-
-def yieldData3_1(datas,nums=1):
-    '''
-    对应于上头的datas2vec10
-    '''
-    while True:
-        data = getRandomData(datas,nums)
-        qstresult,tansresult,fansresult = datas2vec10(data,200)
-        n = qstresult.shape[0]
-        qstresult,tansresult,fansresult = qstresult.reshape(n,200,400),tansresult.reshape(n,200,400),fansresult.reshape(n,200,400)
-        r = np.ones([n,1],'float32')
-        if not r.shape[0]:
-            continue        
-        yield ([np.concatenate((qstresult,qstresult)),np.concatenate((tansresult,fansresult))],
-                np.concatenate((r,np.zeros([n,1],'float32'))))   
-
-def yieldData3_2(datas,nums=1):
-    '''
-    对应于上头的datas2vec10
-    '''
-    while True:
-        data = getRandomData(datas,nums)
-        qstresult,tansresult,fansresult = datas2vec10(data,200)
-        n = qstresult.shape[0]
-        qstresult,tansresult,fansresult = qstresult.reshape(n,200,400),tansresult.reshape(n,200,400),fansresult.reshape(n,200,400)
-        r1 = np.zeros([n,2],'float32')
-        r1[:,0] = 1
-        r2 = np.zeros([n,2],'float32')
-        r2[:,1] = 1
-        if not r1.shape[0]:
-            continue        
-        yield ([np.concatenate((qstresult,qstresult)),np.concatenate((tansresult,fansresult))],
-                np.concatenate((r1,r2)))   
-
-
-def randomVecs(qst,ans,res):
-    length = len(qst)
-    newrange = [ i for i in range(length)]
-    random.shuffle(newrange)
-    nqst,nans,nres = np.zeros(qst.shape,'float32'),np.zeros(ans.shape,'float32'),np.zeros(res.shape,'float32')
-    for i in range(length):
-        nqst[i,:,:,:] = qst[newrange[i],:,:,:]
-        nans[i,:,:,:] = ans[newrange[i],:,:,:]
-        nres[i,0] = res[newrange[i],0]
-    return (nqst,nans,nres)
-
-
-def yieldData4(datas,nums=1):
-    '''
-    random
-    '''
-    while True:
-        data = getRandomData(datas,nums)
-        qstresult,tansresult,fansresult = datas2vec10(data,200)
-        length = len(qstresult)
-        n = qstresult.shape[0]
-        r = np.ones([n,1],'float32')
-        if not r.shape[0]:
-            continue        
-        qst = np.concatenate((qstresult,qstresult),0)
-        ans = np.concatenate((tansresult,fansresult),0)
-        res = np.concatenate((r,np.zeros([n,1],'float32')),0)
-        qst,ans,res = randomVecs(qst,ans,res)
-        yield([qst,ans],res)
-
-
-def readFinalDataFromTxt(filename,decode='utf8'):
-    f = codecs.open(filename,'r',decode)
-    data = []
-    for line in f:
-        data.append([string.replace('\r\n','') for string in line.split('\t')])
-    return data
-        
-finalData=readFinalDataFromTxt(os.path.join(dataDir,'BoP2017-DBQA.test.txt'))
-
-
-def yieldFinalData(datas = finalData):
+def datas2vec(datas,max_sequence_len=200):# 转换data为向量，返回([qst_vec,ans_vec],result)
     length = len(datas)
-    for data in datas:
-<<<<<<< HEAD
-        yield [sts2vec3(data[0],200).reshape(1,200,400,1),sts2vec3(data[1],200).reshape(1,200,400,1)]
-=======
-        yield [sts2vec3(data[0],200).reshape(1,200,400),sts2vec3(data[1],200).reshape(1,200,400)]
+    qstresult = np.zeros([length,max_sequence_len,WORDVECNUM],'float32')
+    ansresult = np.zeros([length,max_sequence_len,WORDVECNUM],'float32')
+    tofresult = np.zeros([length,2],'float32')
+    for tempi,data in enumerate(datas):
+        qstresult[tempi,:,:] = sts2vec(data[1],max_sequence_len)
+        ansresult[tempi,:,:] = sts2vec(data[2],max_sequence_len)
+        r = int(data[0])
+        if r: tofresult[tempi,:] = np.array([1,0])
+        else: tofresult[tempi,:] = np.array([0,1])
+    return ([qstresult,ansresult],tofresult)
 
-def yieldDevData():
-    datas = devData
-    for data in datas:
-        qst_v = sts2vec3(data[0],200).reshape(1,200,400)
-        for ans in data[1]:
-            ans_v = sts2vec3(ans,200).reshape(1,200,400)
-            yield [qst_v,ans_v]
-    
-def writeDevData(model,filename='predict_dev.txt'):
-    a = yieldDevData()
-    f = open(filename,'w')
-    i = 0
-    while True:
-        try:  
-            result = model.predict_generator(a,1)
-            i+=1
-            if i%500 ==0:print('have write %d'%i)
-        except Exception:
-            print('error')
-            break
-        f.write(str(result[0][0]))
-        f.write('\r\n')
-    f.close()
-    
-def writeData(model,filename='predict.txt'):
-    a = yieldFinalData(finalData)
-    f = open(filename,'w')
-    while True:
-        try:  
-            result = model.predict_generator(a,1)
-        except Exception:
-            break
-        f.write(str(result[0][0]))
-        f.write('\r\n')
-    f.close()    
->>>>>>> 9cb62b9e0869c645498a9192f6b743f691c75383
-
-
-def writeData(model,filename='predict.txt'):
-    a = yieldFinalData(finalData)
-    f = open(filename,'w')
-    while True:
-        try:  
-            result = model.predict_generator(a,1)
-        except Exception:
-            break
-        f.write(str(q[0][0]))
-        f.write('\r\n')
-    f.close()
-
-def getRandomData(datas,randomnums=200):
-    return [ datas[i] for i in sorted(random.sample(range(len(datas)), randomnums))]
-
-def yieldData(datas,nums=1):
-    while True:
-        data = getRandomData(datas,nums)
-        qstresult,ansresult,tofresult = datas2vec3(data,200)
-        yield ([qstresult,ansresult],tofresult)
+def datas2vec_Test(datas,max_sequence_len=200):
+    length = len(datas)
+    qstresult = np.zeros([length,max_sequence_len,WORDVECNUM],'float32')
+    ansresult = np.zeros([length,max_sequence_len,WORDVECNUM],'float32')
+    for tempi,data in enumerate(datas):
+        qstresult[tempi,:,:] = sts2vec(data[0],max_sequence_len)
+        ansresult[tempi,:,:] = sts2vec(data[1],max_sequence_len)
+    return [qstresult,ansresult]
         
+def yieldData(datas,nums=20,weight = []):
+    def out(datas,weight):
+        x,result = datas2vec(datas)
+        if not result.shape[0]:
+            print(x,result)
+            return None
+        if not weight:
+            return (x,result)   
+        else:
+            tn = np.where(result[:,0]==1)[0] 
+            fn = np.where(result[:,0]==0)[0] 
+            rweight = np.zeros([result.shape[0]],'float32')
+            rweight[tn] = weight[0]
+            rweight[fn] = weight[1]
+            return (x,result,rweight)
+    length = len(datas)
+    while True:
+        for i in range(int(length/nums)):
+            yield out(datas[i*nums:i*nums+nums],weight)
+        yield out(datas[int(length/nums)*nums:len(datas)],weight)
 
+
+
+def yieldTestData(datas = testData, nums = 20):
+    def out(datas):
+        x,result = datas2vec_Test(datas)
+        if not result.shape[0]:
+            return None
+        return (x,result)          
+    length = len(datas)
+    while True:
+        for i in range(int(length/nums)):
+            yield out(datas[i*nums:i*nums+nums])
+        yield out(datas[int(length/nums)*nums:len(datas)])
+
+
+def trueOfDataPercent(datas):
+    truenum = 0
+    for data in datas:
+        if int(data[0]):
+            truenum += 1
+    return truenum/len(datas)
+
+
+# 不推荐保存。。。
 SAVEVECSDIR = './vecs'
 def saveVecs(datas, div = 100):
     i = 0
@@ -387,7 +177,7 @@ def saveVecs(datas, div = 100):
         if div*i>= maxlength:break
         tempmax = maxlength if (div*i+div-1) >= maxlength else div*i+div-1
         tempdata = datas[div*i : tempmax] 
-        qstresult,ansresult,tofresult = datas2vec3(tempdata,200)
+        qstresult,ansresult,tofresult = datas2vec(tempdata,200)
         np.save(os.path.join(SAVEVECSDIR,'./qst',('%d.npy'%i)),qstresult)
         np.save(os.path.join(SAVEVECSDIR,'./ans',('%d.npy'%i)),ansresult)
         np.save(os.path.join(SAVEVECSDIR,'./tof',('%d.npy'%i)),tofresult)
