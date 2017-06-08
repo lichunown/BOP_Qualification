@@ -9,21 +9,21 @@ import numpy as np
 from readData import yieldData,devData,trainData,testData,trueOfDataPercent
 
 from keras.models import Sequential
-from keras.layers import Dense, Dropout, Flatten,Input,LSTM,Convolution1D,MaxPooling1D,Merge
-from keras.layers import Conv2D, MaxPooling2D,Conv1D
-from keras.utils.np_utils import to_categorical
+from keras.layers import Dense, Dropout, Flatten#,Input,LSTM,Convolution1D,MaxPooling1D,Merge
+from keras.layers import Conv1D,LSTM,MaxPooling1D,Merge#Conv2D, MaxPooling2D,Conv1D
+#from keras.utils.np_utils import to_categorical
 
-os.mkdir('models/')
+os.mkdir('models/')# 默认训练好的权重保存目录
 
-RUN = False
+RUN = False# 是否在直接打开时开始训练
 
 class LSTM_CNN_Model():
     def __init__(self,QA_EMBED_SIZE = 64,BATCH_SIZE = 32):
-        self.QA_EMBED_SIZE = QA_EMBED_SIZE
-        self.BATCH_SIZE = BATCH_SIZE
+        self.QA_EMBED_SIZE = QA_EMBED_SIZE#LSTM 的大小
+        self.BATCH_SIZE = BATCH_SIZE# 一次训练的batch
         self._model = self.createLSTMModel()
         
-    def createLSTMModel(self):
+    def createLSTMModel(self):# 定义训练模型
         qenc = Sequential()
         qenc.add(LSTM(self.QA_EMBED_SIZE, return_sequences=True,input_shape=(200,400)))
         qenc.add(Dropout(0.3))
@@ -44,28 +44,36 @@ class LSTM_CNN_Model():
         _model.compile(optimizer="adam", loss='categorical_crossentropy',metrics=["accuracy"])
         return _model
     
-    def train(self,datas,epoch = 2,save_step=1000,savename = 'models/LSTM_CNN'): 
+    def train(self,datas,epoch = 2,save_step=5000,savename = 'models/LSTM_CNN'): #save_step，每次训练的数量，训练完后保存权重
         tpercent = trueOfDataPercent(datas)
         tweight = 1/tpercent
-        fweight = 1/(1-tpercent)
+        fweight = 1/(1-tpercent)# 因为正确答案和错误答案数目不匹配，需要计算权重
         for epoch in range(epoch):
             print('[running] train epoch %d .' % epoch)
             yielddatas = yieldData(datas,self.BATCH_SIZE,[tweight,fweight])
             tempi = 0
             while True:
                 try:
+                    print('[message] Have train datas %d+'%(epoch,tempi*save_step))
                     self._model.fit_generator(yielddatas, save_step)
                     tempi += 1
                 except StopIteration:
-                    print('[message] %d epoch end. Train all datas %d+'%(epoch,tempi*save_step))
+                    print('[error] generator error. please check data format.')
                     break
                 except Exception:
-                    print('[error]!')
+                    print('[error] I don\'t know why...')
                     break
-            self._model.save_weights(savename+'_%d_%d'%(epoch,tempi))
+                self._model.save_weights(savename+'_%d_%d'%(epoch,tempi))
+                
+    def evaluate(self,datas):
+        yielddatas = yieldData(datas,self.BATCH_SIZE)
+        print(self._model.evaluate_generator(yielddatas,self.BATCH_SIZE))
+        
+    def load(self,filename='models/LSTM_CNN'):
+        self._model.load_weights(filename)
             
     @property
-    def model(self):
+    def model(self):# 返回keras model
         return self._model
 
 if __name__=='__main__' and RUN:

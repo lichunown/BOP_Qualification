@@ -70,16 +70,16 @@ def sts2list(sts):#jieba 分词，返回分词列表
 # 这个函数我没有用到过，但你可以用啊
 def sts2vec_add0(sts,max_sequence_len=200):# max_sequence_len：词的长度。return m*max_sequence_len 矩阵，词不在字典则添加0向量
     sts = sts2list(sts)
-    vec = np.zeros([max_sequence_len,WORDVECNUM],'float32')    
+    vec = np.zeros([max_sequence_len,WORDVECNUM],'float32')    #初始化向量长度
     i = 0
     for word in sts:
         try:
             vec[i,:] = model[word]
-        except KeyError:
+        except KeyError:# model中没有词，添加0向量
             vec[i,:] = np.zeros(WORDVECNUM,'float32')
         i += 1
-        if i >= max_sequence_len:
-            if not IGNOREWARNING:
+        if i >= max_sequence_len:# 长度超出最大长度，退出循环
+            if not IGNOREWARNING:# 如果IGNOREWARNING设置为False，将会输出警告
                 print('[warning] sequence too long:%d'%len(sts))
             break
             #raise KeyError('sequence too long:%d'%len(sts))
@@ -87,7 +87,7 @@ def sts2vec_add0(sts,max_sequence_len=200):# max_sequence_len：词的长度。r
 
 def sts2vec(sts,max_sequence_len=200):# max_sequence_len：词的长度。return m*max_sequence_len 矩阵，词不在字典则忽略
     sts = sts2list(sts)
-    vec = np.zeros([max_sequence_len,WORDVECNUM],'float32')    
+    vec = np.zeros([max_sequence_len,WORDVECNUM],'float32')     #初始化向量长度
     i = 0
     for word in sts:
         try:
@@ -104,18 +104,18 @@ def sts2vec(sts,max_sequence_len=200):# max_sequence_len：词的长度。return
 
 def datas2vec(datas,max_sequence_len=200):# 转换data为向量，返回([qst_vec,ans_vec],result)
     length = len(datas)
-    qstresult = np.zeros([length,max_sequence_len,WORDVECNUM],'float32')
-    ansresult = np.zeros([length,max_sequence_len,WORDVECNUM],'float32')
-    tofresult = np.zeros([length,2],'float32')
+    qstresult = np.zeros([length,max_sequence_len,WORDVECNUM],'float32')# 问题向量
+    ansresult = np.zeros([length,max_sequence_len,WORDVECNUM],'float32')# 回答向量
+    tofresult = np.zeros([length,2],'float32')# 结果向量 onehot  m*2
     for tempi,data in enumerate(datas):
         qstresult[tempi,:,:] = sts2vec(data[1],max_sequence_len)
         ansresult[tempi,:,:] = sts2vec(data[2],max_sequence_len)
-        r = int(data[0])
+        r = int(data[0])# 正确答案，为[1,0],错误答案，为[0,1]
         if r: tofresult[tempi,:] = np.array([1,0])
         else: tofresult[tempi,:] = np.array([0,1])
     return ([qstresult,ansresult],tofresult)
 
-def datas2vec_Test(datas,max_sequence_len=200):
+def datas2vec_Test(datas,max_sequence_len=200):# 转换测试集为向量，测试集无正确答案，故只是列数改变
     length = len(datas)
     qstresult = np.zeros([length,max_sequence_len,WORDVECNUM],'float32')
     ansresult = np.zeros([length,max_sequence_len,WORDVECNUM],'float32')
@@ -124,7 +124,7 @@ def datas2vec_Test(datas,max_sequence_len=200):
         ansresult[tempi,:,:] = sts2vec(data[1],max_sequence_len)
     return [qstresult,ansresult]
         
-def yieldData(datas,nums=20,weight = []):
+def yieldData(datas,nums=20,weight = []):# 使用生成器，生成计算的数据
     def out(datas,weight):
         x,result = datas2vec(datas)
         if not result.shape[0]:
@@ -132,7 +132,7 @@ def yieldData(datas,nums=20,weight = []):
             return None
         if not weight:
             return (x,result)   
-        else:
+        else:# 对数据添加权重
             tn = np.where(result[:,0]==1)[0] 
             fn = np.where(result[:,0]==0)[0] 
             rweight = np.zeros([result.shape[0]],'float32')
@@ -140,14 +140,14 @@ def yieldData(datas,nums=20,weight = []):
             rweight[fn] = weight[1]
             return (x,result,rweight)
     length = len(datas)
-    while True:
+    while True:# keras要求生成器必须无限次的生成元素，故无限循环
         for i in range(int(length/nums)):
             yield out(datas[i*nums:i*nums+nums],weight)
         yield out(datas[int(length/nums)*nums:len(datas)],weight)
 
 
 
-def yieldTestData(datas = testData, nums = 20):
+def yieldTestData(datas = testData, nums = 20):#同上，只是没有权重一说
     def out(datas):
         x,result = datas2vec_Test(datas)
         if not result.shape[0]:
@@ -160,7 +160,7 @@ def yieldTestData(datas = testData, nums = 20):
         yield out(datas[int(length/nums)*nums:len(datas)])
 
 
-def trueOfDataPercent(datas):
+def trueOfDataPercent(datas):#正确答案在所有答案中所占的比重。可以用来计算训练时赋予的权重
     truenum = 0
     for data in datas:
         if int(data[0]):
@@ -170,7 +170,7 @@ def trueOfDataPercent(datas):
 
 # 不推荐保存。。。
 SAVEVECSDIR = './vecs'
-def saveVecs(datas, div = 100):
+def saveVecs(datas, div = 100):# 将转换后的文本矩阵保存在硬盘上，加快运算速度
     i = 0
     maxlength=len(datas)
     while True:
