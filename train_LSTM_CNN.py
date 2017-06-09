@@ -50,13 +50,14 @@ class LSTM_CNN_Model():
         tpercent = trueOfDataPercent(datas)
         tweight = 1/tpercent
         fweight = 1/(1-tpercent)# 因为正确答案和错误答案数目不匹配，需要计算权重
+        datalength = len(datas)
         for epoch in range(epoch):
             print('[running] train epoch %d .' % epoch)
             yielddatas = yieldData(datas,self.BATCH_SIZE,[tweight,fweight])
             tempi = 0
             while True:
                 try:
-                    print('[message]: epoch:%d. --- Have train datas %d+'%(epoch,tempi*save_step))
+                    print('[message]: epoch:%d. --- Have train datas %d+'%(epoch,self.BATCH_SIZE*tempi*save_step))
                     self._model.fit_generator(yielddatas, save_step)
                     tempi += 1
                 except StopIteration:
@@ -66,6 +67,8 @@ class LSTM_CNN_Model():
                     print('[error]: %s'%e)
                     break
                 self._model.save_weights(savename+'_%d_%d'%(epoch,tempi))
+                if self.BATCH_SIZE*tempi*save_step>=datalength:
+                    break
                 
     def evaluate(self,datas):
         yielddatas = yieldData(datas,self.BATCH_SIZE)
