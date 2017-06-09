@@ -13,9 +13,11 @@ from keras.layers import Dense, Dropout, Flatten#,Input,LSTM,Convolution1D,MaxPo
 from keras.layers import Conv1D,LSTM,MaxPooling1D,Merge#Conv2D, MaxPooling2D,Conv1D
 #from keras.utils.np_utils import to_categorical
 
-os.mkdir('models/')# 默认训练好的权重保存目录
 
-RUN = False# 是否在直接打开时开始训练
+if not os.path.exists('models/'):
+    os.mkdir('models/')# 默认训练好的权重保存目录
+
+RUN = True# 是否在直接打开时开始训练
 
 class LSTM_CNN_Model():
     def __init__(self,QA_EMBED_SIZE = 64,BATCH_SIZE = 32):
@@ -54,14 +56,14 @@ class LSTM_CNN_Model():
             tempi = 0
             while True:
                 try:
-                    print('[message] Have train datas %d+'%(epoch,tempi*save_step))
+                    print('[message]: epoch:%d. --- Have train datas %d+'%(epoch,tempi*save_step))
                     self._model.fit_generator(yielddatas, save_step)
                     tempi += 1
                 except StopIteration:
-                    print('[error] generator error. please check data format.')
+                    print('[error]: generator error. please check data format.')
                     break
-                except Exception:
-                    print('[error] I don\'t know why...')
+                except Exception as e:
+                    print('[error]: %s'%e)
                     break
                 self._model.save_weights(savename+'_%d_%d'%(epoch,tempi))
                 
